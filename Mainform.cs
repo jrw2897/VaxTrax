@@ -1,0 +1,963 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+using System.Globalization;
+using Dapper;
+
+namespace VaxTrax_2._0_
+{
+    public partial class MainForm : Form
+    {
+        public MainForm()
+        {
+            InitializeComponent();
+        }
+
+        Insurance newInsurance = new Insurance();
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            // This is a form load event showing which user is logged into the system.
+            // It also sets reasonable default values for DateTimePicker controls. 
+            userIDLabel.Text = GlobalUser.UserID + " Logged In.";
+
+            dateAdministeredTextBox.Value = DateTime.Today;
+
+            expirationDateTextBox.Value = dateAdministeredTextBox.Value.AddMonths(1);
+            expirationDateTextBox.MinDate = DateTime.Today;
+
+        }
+
+        private void exitButton_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Are you sure you want to exit the application?", "Exit Application", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            {
+                this.Close();
+            }
+            //this.Close();
+        }
+
+        private void vaersButton_Click(object sender, EventArgs e)
+        {
+            // This is a link to the VAERS website for reporting adverse reactions.
+            System.Diagnostics.Process.Start("https://vaers.hhs.gov/esub/index.jsp");
+        }
+
+        private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            LoginForm newLoginForm = new LoginForm();
+
+            newLoginForm.Show();
+        }
+
+        private void addButton_Click(object sender, EventArgs e)
+        {
+            // This block of code occurs when the user clicks the add button
+            // It instantiates new objects for Vaccine and Patient and assigns values
+            // to their respective properties from the textboxes. After the properties 
+            // have been assigned values, the object information is passed into the database
+            Vaccine newVaccine = new Vaccine();
+
+            Patient newPatient = new Patient();
+
+            List<string> PatientRace = new List<string>();
+
+            List<string> PatientEthnicity = new List<string>();
+
+            newPatient.First_Name = fNameTextBox.Text.Trim();
+            newPatient.Middle_Name = mNameTextBox.Text.Trim();
+            newPatient.Last_Name = lNameTextBox.Text.Trim();
+            newPatient.Date_of_Birth = DOBTextBox.Text.Trim();
+            newPatient.Street1 = street1TextBox.Text.Trim();
+            newPatient.Street2 = street2TextBox.Text.Trim();
+            newPatient.City = cityTextBox.Text.Trim();
+            newPatient.County = countyTextBox.Text.Trim();
+            newPatient.State = stateTextBox.Text.Trim();
+            newPatient.Zipcode = zipcodeTextBox.Text.Trim();
+
+            if (alaskanCheck.Checked)
+            {
+                PatientRace.Add("American Indian/Alaskan Native");
+            }
+            if (asianCheck.Checked)
+            {
+                PatientRace.Add("Asian");
+            }
+            if (hawaiianCheck.Checked)
+            {
+                PatientRace.Add("Native Hawaiian or Pacific Islander");
+            }
+            if (blackCheck.Checked)
+            {
+                PatientRace.Add("Black/African American");
+            }
+            if (whiteCheck.Checked)
+            {
+                PatientRace.Add("White");
+            }
+            if (otherCheck.Checked)
+            {
+                PatientRace.Add("Other Race");
+            }
+            if (unknownRaceCheck.Checked)
+            {
+                PatientRace.Add("Unknown");
+            }
+            if (unreportableRaceCheck.Checked)
+            {
+                PatientRace.Add("Unable to report");
+            }
+
+            for(int i = 0; i < PatientRace.Count; i++)
+            {
+                newPatient.Race += PatientRace[i] + ", ";
+            }
+
+            if (hispanicCheck.Checked)
+            {
+                PatientEthnicity.Add("Hispanic or Latino");
+            }
+            if (notHispanicCheck.Checked)
+            {
+                PatientEthnicity.Add("Not Hispanic or Latino");
+            }
+            if (unknownCheck.Checked)
+            {
+                PatientEthnicity.Add("Unknown");
+            }
+            if (unreportableCheck.Checked)
+            {
+                PatientEthnicity.Add("Unable to report");
+            }
+
+            for(int j = 0; j < PatientEthnicity.Count; j++)
+            {
+                newPatient.Ethnicity += PatientEthnicity[j] + ", ";
+            }
+
+            if (maleRadio.Checked)
+            {
+                newPatient.Sex = "M";
+            }
+            else if (femaleRadio.Checked)
+            {
+                newPatient.Sex = "F";
+            }
+            else if (unknownRadio.Checked)
+            {
+                newPatient.Sex = "U";
+            }
+
+            newInsurance.Insurer = insurerTextBox.Text.Trim();
+            newInsurance.Holder = primaryHolderTextBox.Text.Trim();
+            newInsurance.GroupID = insuranceIDTextBox.Text.Trim();
+
+          
+
+            /*
+            if (refuseYesRadio.Checked)
+            {
+                newVaccine.RefusedVaccination = "Yes";
+            }
+            else if (refusedNoRadio.Checked)
+            {
+                newVaccine.RefusedVaccination = "No";
+            }
+            */
+         
+            try
+            {
+                CheckInput.CheckRequiredFields(newPatient, newVaccine);
+
+                if (PatientMethods.PatientExists(fNameTextBox.Text.Trim(), lNameTextBox.Text.Trim(), DOBTextBox.Text))
+                {
+                    if(MessageBox.Show("Would you like to save vaccine information for this patient?",
+                        "Patient " + fNameTextBox.Text.Trim() + " " + lNameTextBox.Text.Trim() + ".", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    {
+                        newPatient = PatientMethods.GetPatient(fNameTextBox.Text.Trim(), lNameTextBox.Text.Trim(), DOBTextBox.Text);
+
+                        newVaccine.patient_ID = newPatient.patient_ID;
+
+                        newVaccine.Typecvx = typeTextBox.Text.Trim();
+                        newVaccine.Product = productTextBox.Text.Trim();
+                        newVaccine.LotNum = lotNumberTextBox.Text.Trim();
+                        newVaccine.DateAdministered = dateAdministeredTextBox.Text.Trim();
+                        newVaccine.ExpirationDate = expirationDateTextBox.Text.Trim();
+                        newVaccine.Manufacture = manufacturerTextBox.Text.Trim();
+                        newVaccine.NumWasted = Convert.ToInt32(wastedAmountTextBox.Text.Trim());
+                        newVaccine.NumDose = Convert.ToInt32(doseNumberTextBox.Text.Trim());
+                        //newVaccine.RefusalReason = refusalReasonTextBox.Text.Trim();
+                        newVaccine.Vaccinator_Name = vaccinatorTextBox.Text.Trim();
+
+                        if (leftarmRadio.Checked)
+                        {
+                            newVaccine.Administration_site = "Left Arm";
+                        }
+                        else if (rightarmRadio.Checked)
+                        {
+                            newVaccine.Administration_site = "Right Arm";
+                        }
+                        else if (extremityleftRadio.Checked)
+                        {
+                            newVaccine.Administration_site = "Lower Extremity Left";
+                        }
+                        else if (extremityRightRadio.Checked)
+                        {
+                            newVaccine.Administration_site = "Lower Extremity Right";
+                        }
+
+                        if (maYesRadio.Checked)
+                        {
+                            newVaccine.MissedAppointment = "Y";
+                        }
+                        else if (maNoRadio.Checked)
+                        {
+                            newVaccine.MissedAppointment = "N";
+                        }
+
+                        if (coYesRadio.Checked)
+                        {
+                            newVaccine.Comorbidity = "Yes";
+                        }
+                        else if (coNoRadio.Checked)
+                        {
+                            newVaccine.Comorbidity = "No";
+                        }
+
+                        if (EUAYesRadio.Checked)
+                        {
+                            newVaccine.RevievedEUA = "Yes";
+                        }
+                        else if (EUANoRadio.Checked)
+                        {
+                            newVaccine.RevievedEUA = "No";
+                        }
+
+                        CheckInput.CheckRequiredFields(newPatient, newVaccine);
+
+                        try
+                        {
+                           if (VaccineMethods.VaccineExists(newVaccine.patient_ID, newVaccine.NumDose))
+                           {
+                                MessageBox.Show("A record of dose number " + newVaccine.NumDose + " already exists for " + newPatient.First_Name + " " + newPatient.Last_Name
+                                    + ". A duplicate record can not be created.");
+                           }
+                           else
+                           {
+                                try
+                                {
+                                    bool status = VaccineMethods.AddVaccine(newVaccine);
+
+                                    if (status)
+                                    {
+                                        MessageBox.Show("Vaccine information for " + fNameTextBox.Text.Trim() + " " + lNameTextBox.Text.Trim() + " has been updated.");
+
+                                        ClearAllFields();
+                                    }
+                                    else
+                                    {
+                                        MessageBox.Show("Vaccine information COULD NOT be updated.");
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show(ex.Message);
+                                }
+                           }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(ex.Message);
+                        }
+
+                    }
+                }
+                else
+                {
+                    string connectionString = GetConnectionString();
+                    string sqlString = "select max(patient_ID) from Patient";
+
+                    int patientMaxID;
+
+                    using (IDbConnection db = new SqlConnection(connectionString))
+                    {
+                        patientMaxID = (Convert.ToInt32(db.ExecuteScalar(sqlString)));
+                    }
+
+                    newPatient.patient_ID = (patientMaxID + 1);
+
+
+                    try
+                    {
+                        bool status = PatientMethods.AddPatient(newPatient);
+
+                        if (status)
+                        {
+                            MessageBox.Show("Patient has been added to database.");
+
+                            newVaccine.patient_ID = newPatient.patient_ID;
+
+                            newVaccine.Typecvx = typeTextBox.Text.Trim();
+                            newVaccine.Product = productTextBox.Text.Trim();
+                            newVaccine.LotNum = lotNumberTextBox.Text.Trim();
+                            newVaccine.DateAdministered = dateAdministeredTextBox.Text.Trim();
+                            newVaccine.ExpirationDate = expirationDateTextBox.Text.Trim();
+                            newVaccine.Manufacture = manufacturerTextBox.Text.Trim();
+                            newVaccine.NumWasted = Convert.ToInt32(wastedAmountTextBox.Text.Trim());
+                            newVaccine.NumDose = Convert.ToInt32(doseNumberTextBox.Text.Trim());
+                            //newVaccine.RefusalReason = refusalReasonTextBox.Text.Trim();
+                            newVaccine.Vaccinator_Name = vaccinatorTextBox.Text.Trim();
+
+                            if (leftarmRadio.Checked)
+                            {
+                                newVaccine.Administration_site = "Left Arm";
+                            }
+                            else if (rightarmRadio.Checked)
+                            {
+                                newVaccine.Administration_site = "Right Arm";
+                            }
+                            else if (extremityleftRadio.Checked)
+                            {
+                                newVaccine.Administration_site = "Lower Extremity Left";
+                            }
+                            else if (extremityRightRadio.Checked)
+                            {
+                                newVaccine.Administration_site = "Lower Extremity Right";
+                            }
+
+                            if (maYesRadio.Checked)
+                            {
+                                newVaccine.MissedAppointment = "Y";
+                            }
+                            else if (maNoRadio.Checked)
+                            {
+                                newVaccine.MissedAppointment = "N";
+                            }
+
+                            if (coYesRadio.Checked)
+                            {
+                                newVaccine.Comorbidity = "Yes";
+                            }
+                            else if (coNoRadio.Checked)
+                            {
+                                newVaccine.Comorbidity = "No";
+                            }
+
+                            if (EUAYesRadio.Checked)
+                            {
+                                newVaccine.RevievedEUA = "Yes";
+                            }
+                            else if (EUANoRadio.Checked)
+                            {
+                                newVaccine.RevievedEUA = "No";
+                            }
+
+                            CheckInput.CheckRequiredFields(newPatient, newVaccine);
+
+                            try
+                            {
+                                if (VaccineMethods.VaccineExists(newVaccine.patient_ID, newVaccine.NumDose))
+                                {
+                                    MessageBox.Show("A record of dose number " + newVaccine.NumDose + " already exists for " + newPatient.First_Name + " " + newPatient.Last_Name
+                                        + ". A duplicate record can not be created.");
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        bool vaccineStatus = VaccineMethods.AddVaccine(newVaccine);
+
+                                        if (vaccineStatus)
+                                        {
+                                            MessageBox.Show("Vaccine information for " + fNameTextBox.Text.Trim() + " " + lNameTextBox.Text.Trim() + " has been updated.");
+
+                                            ClearAllFields();
+                                        }
+                                        else
+                                        {
+                                            MessageBox.Show("Vaccine information COULD NOT be updated.");
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        MessageBox.Show(ex.Message);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show(ex.Message);
+                            }
+
+                        }
+                        else
+                        {
+                            MessageBox.Show("Patient has NOT been added to database.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+
+            //ClearAllFields();
+
+            
+        }
+
+        private void refuseYesRadio_CheckedChanged(object sender, EventArgs e)
+        {
+            // This block of code simply enables or disables controls within the form
+            // based on whether or not the patient has been refused a vaccine
+            if (refuseYesRadio.Checked)
+            {
+                typeTextBox.Text = "";
+                productTextBox.Text = "";
+                lotNumberTextBox.Text = "";
+                manufacturerTextBox.Text = "";
+                dateAdministeredTextBox.Text = "";
+                expirationDateTextBox.Text = "";
+                wastedAmountTextBox.Text = "";
+                doseNumberTextBox.Text = "";
+                vaccinatorTextBox.Text = "";
+
+                leftarmRadio.Checked = false;
+                rightarmRadio.Checked = false;
+                extremityleftRadio.Checked = false;
+                extremityRightRadio.Checked = false;
+
+                maYesRadio.Checked = false;
+                maNoRadio.Checked = false;
+
+                coYesRadio.Checked = false;
+                coNoRadio.Checked = false;
+
+                EUAYesRadio.Checked = false;
+                EUANoRadio.Checked = false;
+
+                vaccineGroupBox.Enabled = false;
+
+                refusalReasonTextBox.Enabled = true;
+            }
+
+            if (refusedNoRadio.Checked)
+            {
+                vaccineGroupBox.Enabled = true;
+
+                refusalReasonTextBox.Enabled = false;
+            }
+        }
+
+        private static string GetConnectionString()
+        {
+            string connectionString = "server=vaxtrax.database.windows.net;database=VaxTraxDB;user id=Brinkmann;password=VaxTrax1!;";
+
+            return connectionString;
+        }
+
+
+        private void clearButton_Click(object sender, EventArgs e)
+        {
+            if(MessageBox.Show("Are you sure you want to clear all fields?", "Clear All Fields", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            {
+                ClearAllFields();
+            }
+        }
+
+        public void ClearAllFields()
+        {
+            // This is a simple method for clearing all the fields if the user needs to reset the form
+            searchFName.SelectedIndex = -1;
+            searchLName.SelectedIndex = -1;
+            fNameTextBox.Text = "";
+            mNameTextBox.Text = "";
+            lNameTextBox.Text = "";
+            maleRadio.Checked = false;
+            femaleRadio.Checked = false;
+            unknownRadio.Checked = false;
+            hispanicCheck.Checked = false;
+            notHispanicCheck.Checked = false;
+            unknownCheck.Checked = false;
+            unreportableCheck.Checked = false;
+            alaskanCheck.Checked = false;
+            asianCheck.Checked = false;
+            hawaiianCheck.Checked = false;
+            blackCheck.Checked = false;
+            whiteCheck.Checked = false;
+            otherCheck.Checked = false;
+            unknownRaceCheck.Checked = false;
+            unreportableRaceCheck.Checked = false;
+            street1TextBox.Text = "";
+            street2TextBox.Text = "";
+            cityTextBox.Text = "";
+            countyTextBox.Text = "";
+            stateTextBox.Text = "MO";
+            zipcodeTextBox.Text = "";
+            insurerTextBox.Text = "";
+            primaryHolderTextBox.Text = "";
+            insuranceIDTextBox.Text = "";
+            leftarmRadio.Checked = false;
+            rightarmRadio.Checked = false;
+            extremityleftRadio.Checked = false;
+            extremityRightRadio.Checked = false;
+            typeTextBox.SelectedIndex = -1;
+            productTextBox.SelectedIndex = -1;
+            lotNumberTextBox.Text = "";
+            manufacturerTextBox.SelectedIndex = -1;
+            wastedAmountTextBox.SelectedIndex = -1;
+            doseNumberTextBox.SelectedIndex = -1;
+            vaccinatorTextBox.Text = "";
+            maYesRadio.Checked = false;
+            maNoRadio.Checked = false;
+            coYesRadio.Checked = false;
+            coNoRadio.Checked = false;
+            
+            refuseYesRadio.Checked = false;
+            refusedNoRadio.Checked = false;
+            refusalReasonTextBox.Text = "";
+            refusalReasonTextBox.Enabled = false;
+            
+            EUAYesRadio.Checked = false;
+            EUANoRadio.Checked = false;
+
+            vaccineDataGrid.DataSource = null;
+
+            patientInfoGroupBox.Enabled = true;
+            vaccineGroupBox.Enabled = true;
+
+        }
+
+        private void searchFName_DropDown(object sender, EventArgs e)
+        {
+
+        }
+
+        private void searchFName_TextChanged(object sender, EventArgs e)
+        {
+            // This section determines date of birth based on first and last name
+            if (searchFName.Text != "" && searchLName.Text != "")
+            {
+                string firstName = searchFName.Text.Trim();
+                string lastName = searchLName.Text.Trim();
+                DateTime lookupDOB;
+                string connectionString = GetConnectionString();
+                string sqlString = "select Date_of_Birth from Patient where First_Name = @First_Name and Last_Name = @Last_Name";
+                try
+                {
+                    using (IDbConnection db = new SqlConnection(connectionString))
+                    {
+                        DynamicParameters parameters = new DynamicParameters();
+                        parameters.Add("@First_Name", firstName, DbType.String, ParameterDirection.Input);
+                        parameters.Add("@Last_Name", lastName, DbType.String, ParameterDirection.Input);
+                        lookupDOB = Convert.ToDateTime(db.ExecuteScalar(sqlString, parameters));
+                        searchDOB.Value = lookupDOB;
+                    }
+                }
+                catch /*(Exception ex)*/
+                {
+                    searchDOB.Value = searchDOB.MinDate;
+                }
+                //searchDOB.Value = lookupDOB;
+            }
+ 
+        }
+
+        private void searchFName_Enter(object sender, EventArgs e)
+        {
+            // This section determines a list of first names based on the value of the last name
+            if (searchLName.Text == "")
+            {
+                List<string> patientList = new List<string>();
+                string connectionString = GetConnectionString();
+                string sqlString = "select distinct(First_Name) from Patient order by First_Name";
+                try
+                {
+                    using (IDbConnection db = new SqlConnection(connectionString))
+                    {
+                        patientList = db.Query<string>(sqlString).ToList();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                }
+                //patientList.Insert(0, "");
+                searchFName.DataSource = patientList;
+            }
+            else
+            {
+                string lastName = searchLName.Text.Trim();
+
+                List<string> patientList = new List<string>();
+                string connectionString = GetConnectionString();
+                string sqlString = "select First_Name from Patient where Last_Name = @Last_Name order by First_Name";
+                try
+                {
+                    using (IDbConnection db = new SqlConnection(connectionString))
+                    {
+                        DynamicParameters parameters = new DynamicParameters();
+                        parameters.Add("@Last_Name", lastName, DbType.String, ParameterDirection.Input);
+                        patientList = db.Query<string>(sqlString, parameters).ToList();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                }
+                //patientList.Insert(0, "");
+                searchFName.DataSource = patientList;
+            }
+        }
+
+        private void searchLName_Enter(object sender, EventArgs e)
+        {
+            // This section determines a list of last names based on the value of the first name
+            if (searchFName.Text == "")
+            {
+                List<string> patientList = new List<string>();
+                string connectionString = GetConnectionString();
+                string sqlString = "select distinct(Last_Name) from Patient order by Last_Name";
+                try
+                {
+                    using (IDbConnection db = new SqlConnection(connectionString))
+                    {
+                        patientList = db.Query<string>(sqlString).ToList();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                }
+                //patientList.Insert(0, "");
+                searchLName.DataSource = patientList;
+            }
+            else
+            {
+                string firstName = searchFName.Text.Trim();
+
+                List<string> patientList = new List<string>();
+                string connectionString = GetConnectionString();
+                string sqlString = "select Last_Name from Patient where First_Name = @First_Name order by Last_Name";
+                try
+                {
+                    using (IDbConnection db = new SqlConnection(connectionString))
+                    {
+                        DynamicParameters parameters = new DynamicParameters();
+                        parameters.Add("@First_Name", firstName, DbType.String, ParameterDirection.Input);
+                        patientList = db.Query<string>(sqlString, parameters).ToList();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                }
+                //patientList.Insert(0, "");
+                searchLName.DataSource = patientList;
+            }
+        }
+
+        private void searchButton_Click_1(object sender, EventArgs e)
+        {
+            // This section searches the database for a matching patient record based on first name, last name, and date of birth
+            
+            Patient newPatient = new Patient();
+
+            try
+            {
+                newPatient = PatientMethods.GetPatient(searchFName.Text.Trim(), searchLName.Text.Trim(), searchDOB.Text.Trim());
+
+                if (newPatient != null)
+                {
+                    try
+                    {
+                        //newPatient = PatientMethods.GetPatient(searchFName.Text.Trim(), searchLName.Text.Trim(), searchDOB.Text.Trim());
+
+                        fNameTextBox.Text = newPatient.First_Name;
+                        mNameTextBox.Text = newPatient.Middle_Name;
+                        lNameTextBox.Text = newPatient.Last_Name;
+                        DOBTextBox.Text = newPatient.Date_of_Birth;
+                        street1TextBox.Text = newPatient.Street1;
+                        street2TextBox.Text = newPatient.Street2;
+                        cityTextBox.Text = newPatient.City;
+                        countyTextBox.Text = newPatient.County;
+                        stateTextBox.Text = newPatient.State;
+                        zipcodeTextBox.Text = newPatient.Zipcode;
+
+                        if (newPatient.Sex == "M")
+                        {
+                            maleRadio.Checked = true;
+                        }
+                        else if (newPatient.Sex == "F")
+                        {
+                            femaleRadio.Checked = true;
+                        }
+                        else if (newPatient.Sex == "U")
+                        {
+                            unknownRadio.Checked = true;
+                        }
+
+                        if (newPatient.Ethnicity.Contains("Hispanic") && !newPatient.Ethnicity.Contains("Not"))
+                        {
+                            hispanicCheck.Checked = true;
+                        }
+                        else
+                        {
+                            hispanicCheck.Checked = false;
+                        }
+
+                        if (newPatient.Ethnicity.Contains("Not"))
+                        {
+                            notHispanicCheck.Checked = true;
+                        }
+                        else
+                        {
+                            notHispanicCheck.Checked = false;
+                        }
+
+                        if (newPatient.Ethnicity.Contains("Unknown"))
+                        {
+                            unknownCheck.Checked = true;
+                        }
+                        else
+                        {
+                            unknownCheck.Checked = false;
+                        }
+
+                        if (newPatient.Ethnicity.Contains("Unable"))
+                        {
+                            unreportableCheck.Checked = true;
+                        }
+                        else
+                        {
+                            unreportableCheck.Checked = false;
+                        }
+
+                        if (newPatient.Race.Contains("Alaskan"))
+                        {
+                            alaskanCheck.Checked = true;
+                        }
+                        else
+                        {
+                            alaskanCheck.Checked = false;
+                        }
+
+                        if (newPatient.Race.Contains("Hawaiian"))
+                        {
+                            hawaiianCheck.Checked = true;
+                        }
+                        else
+                        {
+                            hawaiianCheck.Checked = false;
+                        }
+
+                        if (newPatient.Race.Contains("Asian"))
+                        {
+                            asianCheck.Checked = true;
+                        }
+                        else
+                        {
+                            asianCheck.Checked = false;
+                        }
+
+                        if (newPatient.Race.Contains("Black"))
+                        {
+                            blackCheck.Checked = true;
+                        }
+                        else
+                        {
+                            blackCheck.Checked = false;
+                        }
+
+                        if (newPatient.Race.Contains("White"))
+                        {
+                            whiteCheck.Checked = true;
+                        }
+                        else
+                        {
+                            whiteCheck.Checked = false;
+                        }
+
+                        if (newPatient.Race.Contains("Other"))
+                        {
+                            otherCheck.Checked = true;
+                        }
+                        else
+                        {
+                            otherCheck.Checked = false;
+                        }
+
+                        if (newPatient.Race.Contains("Unknown"))
+                        {
+                            unknownRaceCheck.Checked = true;
+                        }
+                        else
+                        {
+                            unknownRaceCheck.Checked = false;
+                        }
+
+                        if (newPatient.Race.Contains("Unable"))
+                        {
+                            unreportableRaceCheck.Checked = true;
+                        }
+                        else
+                        {
+                            unreportableRaceCheck.Checked = false;
+                        }
+
+                        patientInfoGroupBox.Enabled = false;
+
+                        try
+                        {
+                            List<DataGridVaccine> vaccineList = new List<DataGridVaccine>();
+                            vaccineList = VaccineMethods.GetVaccines(newPatient.patient_ID);
+                            vaccineDataGrid.DataSource = vaccineList;
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(ex.Message);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show($"Patient {searchFName.Text.Trim() + " " + searchLName.Text.Trim()} not found in database.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        private void searchLName_TextChanged(object sender, EventArgs e)
+        {
+            // This section determines date of birth based on first and last name
+            if (searchFName.Text != "" && searchLName.Text != "")
+            {
+                string firstName = searchFName.Text.Trim();
+                string lastName = searchLName.Text.Trim();
+                DateTime lookupDOB;
+                string connectionString = GetConnectionString();
+                string sqlString = "select Date_of_Birth from Patient where First_Name = @First_Name and Last_Name = @Last_Name";
+                try
+                {
+                    using (IDbConnection db = new SqlConnection(connectionString))
+                    {
+                        DynamicParameters parameters = new DynamicParameters();
+                        parameters.Add("@First_Name", firstName, DbType.String, ParameterDirection.Input);
+                        parameters.Add("@Last_Name", lastName, DbType.String, ParameterDirection.Input);
+                        lookupDOB = Convert.ToDateTime(db.ExecuteScalar(sqlString, parameters));
+                        searchDOB.Value = lookupDOB;
+                    }
+                }
+                catch /*(Exception ex)*/
+                {
+                    searchDOB.Value = searchDOB.MinDate;
+                }
+                //searchDOB.Value = lookupDOB;
+            }
+        }
+
+        private void vaccineDataGrid_DoubleClick(object sender, EventArgs e)
+        {
+            // This section populates fields with vaccine information from the datagrid by double clicking on a record
+            
+            /*
+            if (vaccineDataGrid.SelectedRows.Count > 0)
+            {
+                doseNumberTextBox.Text = vaccineDataGrid.SelectedRows[0].Cells[1].Value.ToString();
+                vaccinatorTextBox.Text = vaccineDataGrid.SelectedRows[0].Cells[2].Value.ToString();
+
+                if (vaccineDataGrid.SelectedRows[0].Cells[3].Value.ToString() == "Left Arm")
+                {
+                    leftarmRadio.Checked = true;
+                    rightarmRadio.Checked = false;
+                    extremityleftRadio.Checked = false;
+                    extremityRightRadio.Checked = false;
+                }
+                else if (vaccineDataGrid.SelectedRows[0].Cells[3].Value.ToString() == "Right Arm")
+                {
+                    leftarmRadio.Checked = false;
+                    rightarmRadio.Checked = true;
+                    extremityleftRadio.Checked = false;
+                    extremityRightRadio.Checked = false;
+                }
+                else if (vaccineDataGrid.SelectedRows[0].Cells[3].Value.ToString() == "Lower Extremity Left")
+                {
+                    leftarmRadio.Checked = false;
+                    rightarmRadio.Checked = false;
+                    extremityleftRadio.Checked = true;
+                    extremityRightRadio.Checked = false;
+                }
+                else if (vaccineDataGrid.SelectedRows[0].Cells[3].Value.ToString() == "Lower Extremity Right")
+                {
+                    leftarmRadio.Checked = false;
+                    rightarmRadio.Checked = false;
+                    extremityleftRadio.Checked = false;
+                    extremityRightRadio.Checked = true;
+                }
+
+                productTextBox.Text = vaccineDataGrid.SelectedRows[0].Cells[4].Value.ToString();
+                manufacturerTextBox.Text = vaccineDataGrid.SelectedRows[0].Cells[5].Value.ToString();
+                typeTextBox.Text = vaccineDataGrid.SelectedRows[0].Cells[6].Value.ToString();
+                lotNumberTextBox.Text = vaccineDataGrid.SelectedRows[0].Cells[7].Value.ToString();
+                expirationDateTextBox.Text = vaccineDataGrid.SelectedRows[0].Cells[8].Value.ToString();
+                dateAdministeredTextBox.Text = vaccineDataGrid.SelectedRows[0].Cells[9].Value.ToString();
+                wastedAmountTextBox.Text = vaccineDataGrid.SelectedRows[0].Cells[10].Value.ToString();
+
+                if (vaccineDataGrid.SelectedRows[0].Cells[11].Value.ToString() == "Y")
+                {
+                    maYesRadio.Checked = true;
+                    maNoRadio.Checked = false;
+                }
+                else if (vaccineDataGrid.SelectedRows[0].Cells[11].Value.ToString() == "N")
+                {
+                    maYesRadio.Checked = false;
+                    maNoRadio.Checked = true;
+                }
+
+                if (vaccineDataGrid.SelectedRows[0].Cells[12].Value.ToString() == "Yes")
+                {
+                    coYesRadio.Checked = true;
+                    coNoRadio.Checked = false;
+                }
+                else if (vaccineDataGrid.SelectedRows[0].Cells[12].Value.ToString() == "No")
+                {
+                    coYesRadio.Checked = false;
+                    coNoRadio.Checked = true;
+                }
+
+                if (vaccineDataGrid.SelectedRows[0].Cells[13].Value.ToString() == "Yes")
+                {
+                    EUAYesRadio.Checked = true;
+                    EUANoRadio.Checked = false;
+                }
+                else if (vaccineDataGrid.SelectedRows[0].Cells[13].Value.ToString() == "No")
+                {
+                    EUAYesRadio.Checked = false;
+                    EUANoRadio.Checked = true;
+                }
+            
+                
+            }
+        */
+        }
+    }
+}
