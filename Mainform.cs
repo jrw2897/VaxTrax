@@ -13,6 +13,8 @@ using Dapper;
 
 namespace VaxTrax_2._0_
 {
+    // Author: Dennis Steven Dyer II
+    //   Date: 10/13/2021
     public partial class MainForm : Form
     {
         public MainForm()
@@ -20,13 +22,15 @@ namespace VaxTrax_2._0_
             InitializeComponent();
         }
 
-        Insurance newInsurance = new Insurance();
+        //Insurance newInsurance = new Insurance();
 
         private void MainForm_Load(object sender, EventArgs e)
         {
             // This is a form load event showing which user is logged into the system.
             // It also sets reasonable default values for DateTimePicker controls. 
-            userIDLabel.Text = GlobalUser.UserID + " Logged In.";
+
+            //userIDLabel.Text = GlobalUser.UserID + " Logged In.";
+            userIDLabel.Text = "User Logged In: " + LoginForm.UserName; 
 
             dateAdministeredTextBox.Value = DateTime.Today;
 
@@ -66,6 +70,13 @@ namespace VaxTrax_2._0_
             Vaccine newVaccine = new Vaccine();
 
             Patient newPatient = new Patient();
+
+            Insurance newInsurance = new Insurance();
+
+            User newUser = new User();
+            newUser.UserName = LoginForm.UserName;
+            newUser.Password = LoginForm.Password;
+            newUser.User_ID = LoginMethod.GetUserID(LoginForm.UserName, LoginForm.Password);
 
             List<string> PatientRace = new List<string>();
 
@@ -154,12 +165,90 @@ namespace VaxTrax_2._0_
             {
                 newPatient.Sex = "U";
             }
+            /*
+            if (insurerTextBox.Text.Trim() != "")
+            { newInsurance.Insurer = insurerTextBox.Text.Trim(); }
+            if (primaryHolderTextBox.Text.Trim() != "")
+            { newInsurance.Primary_Holder = primaryHolderTextBox.Text.Trim(); }
+            if (insuranceIDTextBox.Text.Trim() != "")
+            { newInsurance.Group_ID = insuranceIDTextBox.Text.Trim(); }
+            */
 
             newInsurance.Insurer = insurerTextBox.Text.Trim();
-            newInsurance.Holder = primaryHolderTextBox.Text.Trim();
-            newInsurance.GroupID = insuranceIDTextBox.Text.Trim();
+            newInsurance.Primary_Holder = primaryHolderTextBox.Text.Trim();
+            newInsurance.Group_ID = insuranceIDTextBox.Text.Trim();
 
-          
+            newVaccine.Typecvx = typeTextBox.Text.Trim();
+            newVaccine.Product = productTextBox.Text.Trim();
+            newVaccine.LotNum = lotNumberTextBox.Text.Trim();
+            newVaccine.DateAdministered = dateAdministeredTextBox.Text.Trim();
+            newVaccine.ExpirationDate = expirationDateTextBox.Text.Trim();
+            newVaccine.Manufacture = manufacturerTextBox.Text.Trim();
+
+            if(wastedAmountTextBox.SelectedIndex != -1)
+            {
+                newVaccine.NumWasted = Convert.ToInt32(wastedAmountTextBox.Text.Trim());
+            }
+            else
+            {
+                //MessageBox.Show("An integer value must be entered for # Wasted.");
+            }
+
+            if(doseNumberTextBox.SelectedIndex != -1)
+            {
+                newVaccine.NumDose = Convert.ToInt32(doseNumberTextBox.Text.Trim());
+            }
+            else
+            {
+                //MessageBox.Show("An integer value must entered for dose number.");
+            }
+           
+            //newVaccine.RefusalReason = refusalReasonTextBox.Text.Trim();
+            newVaccine.Vaccinator_Name = vaccinatorTextBox.Text.Trim();
+
+            if (leftarmRadio.Checked)
+            {
+                newVaccine.Administration_site = "Left Arm";
+            }
+            else if (rightarmRadio.Checked)
+            {
+                newVaccine.Administration_site = "Right Arm";
+            }
+            else if (extremityleftRadio.Checked)
+            {
+                newVaccine.Administration_site = "Lower Extremity Left";
+            }
+            else if (extremityRightRadio.Checked)
+            {
+                newVaccine.Administration_site = "Lower Extremity Right";
+            }
+
+            if (maYesRadio.Checked)
+            {
+                newVaccine.MissedAppointment = "Y";
+            }
+            else if (maNoRadio.Checked)
+            {
+                newVaccine.MissedAppointment = "N";
+            }
+
+            if (coYesRadio.Checked)
+            {
+                newVaccine.Comorbidity = "Yes";
+            }
+            else if (coNoRadio.Checked)
+            {
+                newVaccine.Comorbidity = "No";
+            }
+
+            if (EUAYesRadio.Checked)
+            {
+                newVaccine.RevievedEUA = "Yes";
+            }
+            else if (EUANoRadio.Checked)
+            {
+                newVaccine.RevievedEUA = "No";
+            }
 
             /*
             if (refuseYesRadio.Checked)
@@ -171,79 +260,92 @@ namespace VaxTrax_2._0_
                 newVaccine.RefusedVaccination = "No";
             }
             */
-         
+
             try
             {
-                CheckInput.CheckRequiredFields(newPatient, newVaccine);
+                CheckInput.CheckPatientFields(newPatient);
 
                 if (PatientMethods.PatientExists(fNameTextBox.Text.Trim(), lNameTextBox.Text.Trim(), DOBTextBox.Text))
                 {
-                    if(MessageBox.Show("Would you like to save vaccine information for this patient?",
-                        "Patient " + fNameTextBox.Text.Trim() + " " + lNameTextBox.Text.Trim() + ".", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    if (refuseYesRadio.Checked)
                     {
                         newPatient = PatientMethods.GetPatient(fNameTextBox.Text.Trim(), lNameTextBox.Text.Trim(), DOBTextBox.Text);
 
-                        newVaccine.patient_ID = newPatient.patient_ID;
+                        Refusal newRefusal = new Refusal();
+                        newRefusal.patient_ID = newPatient.patient_ID;
+                        newRefusal.User_ID = newUser.User_ID;
+                        newRefusal.Date = dateAdministeredTextBox.Value;
 
-                        newVaccine.Typecvx = typeTextBox.Text.Trim();
-                        newVaccine.Product = productTextBox.Text.Trim();
-                        newVaccine.LotNum = lotNumberTextBox.Text.Trim();
-                        newVaccine.DateAdministered = dateAdministeredTextBox.Text.Trim();
-                        newVaccine.ExpirationDate = expirationDateTextBox.Text.Trim();
-                        newVaccine.Manufacture = manufacturerTextBox.Text.Trim();
-                        newVaccine.NumWasted = Convert.ToInt32(wastedAmountTextBox.Text.Trim());
-                        newVaccine.NumDose = Convert.ToInt32(doseNumberTextBox.Text.Trim());
-                        //newVaccine.RefusalReason = refusalReasonTextBox.Text.Trim();
-                        newVaccine.Vaccinator_Name = vaccinatorTextBox.Text.Trim();
+                        if (refusalReasonTextBox.SelectedIndex == -1)
+                        {
+                            MessageBox.Show("A reason must be given for a vaccination refusal.");
+                        }
+                        else
+                        {
+                            newRefusal.Refusal_Reason = refusalReasonTextBox.Text.Trim();
 
-                        if (leftarmRadio.Checked)
-                        {
-                            newVaccine.Administration_site = "Left Arm";
-                        }
-                        else if (rightarmRadio.Checked)
-                        {
-                            newVaccine.Administration_site = "Right Arm";
-                        }
-                        else if (extremityleftRadio.Checked)
-                        {
-                            newVaccine.Administration_site = "Lower Extremity Left";
-                        }
-                        else if (extremityRightRadio.Checked)
-                        {
-                            newVaccine.Administration_site = "Lower Extremity Right";
-                        }
+                            if (MessageBox.Show("Would you like to save vaccine refusal information for this patient?",
+                                "Patient " + fNameTextBox.Text.Trim() + " " + lNameTextBox.Text.Trim() + ".", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                            {
+                                //newPatient.patient_ID = newInsurance.patient_ID;
+                                try
+                                {
+                                    newInsurance.patient_ID = newPatient.patient_ID;
 
-                        if (maYesRadio.Checked)
-                        {
-                            newVaccine.MissedAppointment = "Y";
-                        }
-                        else if (maNoRadio.Checked)
-                        {
-                            newVaccine.MissedAppointment = "N";
-                        }
+                                    if (CheckInput.CheckForInsurance(newInsurance) && !(InsuranceMethods.InsuranceExists(newInsurance)))
+                                    {
+                                        try
+                                        {
+                                            InsuranceMethods.AddInsurance(newInsurance);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            throw ex;
+                                        }
+                                    }
+                                    else if (CheckInput.CheckForInsurance(newInsurance) && InsuranceMethods.InsuranceExists(newInsurance))
+                                    {
+                                        try
+                                        {
+                                            InsuranceMethods.UpdateInsurance(newInsurance);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            throw ex;
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    throw ex;
+                                }
+                                try
+                                {
+                                    if (RefusalMethods.AddRefusal(newRefusal, newUser))
+                                    {
+                                        MessageBox.Show("Vaccine refusal information for this patient has been recorded.");
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    throw ex;
+                                }
 
-                        if (coYesRadio.Checked)
-                        {
-                            newVaccine.Comorbidity = "Yes";
+                            }
                         }
-                        else if (coNoRadio.Checked)
-                        {
-                            newVaccine.Comorbidity = "No";
-                        }
+                   
+                    }
+                    else if(MessageBox.Show("Would you like to save vaccine information for this patient?",
+                        "Patient " + fNameTextBox.Text.Trim() + " " + lNameTextBox.Text.Trim() + ".", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                         {
+                         newPatient = PatientMethods.GetPatient(fNameTextBox.Text.Trim(), lNameTextBox.Text.Trim(), DOBTextBox.Text);
 
-                        if (EUAYesRadio.Checked)
-                        {
-                            newVaccine.RevievedEUA = "Yes";
-                        }
-                        else if (EUANoRadio.Checked)
-                        {
-                            newVaccine.RevievedEUA = "No";
-                        }
+                         newVaccine.patient_ID = newPatient.patient_ID;
 
-                        CheckInput.CheckRequiredFields(newPatient, newVaccine);
+                         CheckInput.CheckRequiredFields(newPatient, newVaccine);
 
-                        try
-                        {
+                         try
+                         {
                            if (VaccineMethods.VaccineExists(newVaccine.patient_ID, newVaccine.NumDose))
                            {
                                 MessageBox.Show("A record of dose number " + newVaccine.NumDose + " already exists for " + newPatient.First_Name + " " + newPatient.Last_Name
@@ -251,6 +353,38 @@ namespace VaxTrax_2._0_
                            }
                            else
                            {
+                                //newPatient.patient_ID = newInsurance.patient_ID;
+                                try
+                                {
+                                    newInsurance.patient_ID = newPatient.patient_ID;
+
+                                    if (CheckInput.CheckForInsurance(newInsurance) && !(InsuranceMethods.InsuranceExists(newInsurance)))
+                                    {
+                                        try
+                                        {
+                                            InsuranceMethods.AddInsurance(newInsurance);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            throw ex;
+                                        }
+                                    }
+                                    else if (CheckInput.CheckForInsurance(newInsurance) && InsuranceMethods.InsuranceExists(newInsurance))
+                                    {
+                                        try
+                                        {
+                                            InsuranceMethods.UpdateInsurance(newInsurance);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            throw ex;
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    throw ex;
+                                }
                                 try
                                 {
                                     bool status = VaccineMethods.AddVaccine(newVaccine);
@@ -271,13 +405,12 @@ namespace VaxTrax_2._0_
                                     MessageBox.Show(ex.Message);
                                 }
                            }
-                        }
-                        catch (Exception ex)
-                        {
+                         }
+                         catch (Exception ex)
+                         {
                             MessageBox.Show(ex.Message);
-                        }
-
-                    }
+                         }
+                         }
                 }
                 else
                 {
@@ -296,104 +429,158 @@ namespace VaxTrax_2._0_
 
                     try
                     {
+                        CheckInput.CheckRequiredFields(newPatient, newVaccine);
+
                         bool status = PatientMethods.AddPatient(newPatient);
 
                         if (status)
                         {
-                            MessageBox.Show("Patient has been added to database.");
+                            //MessageBox.Show("Patient has been added to database.");
 
-                            newVaccine.patient_ID = newPatient.patient_ID;
+                            if (refuseYesRadio.Checked)
+                            {
+                                newPatient = PatientMethods.GetPatient(fNameTextBox.Text.Trim(), lNameTextBox.Text.Trim(), DOBTextBox.Text);
 
-                            newVaccine.Typecvx = typeTextBox.Text.Trim();
-                            newVaccine.Product = productTextBox.Text.Trim();
-                            newVaccine.LotNum = lotNumberTextBox.Text.Trim();
-                            newVaccine.DateAdministered = dateAdministeredTextBox.Text.Trim();
-                            newVaccine.ExpirationDate = expirationDateTextBox.Text.Trim();
-                            newVaccine.Manufacture = manufacturerTextBox.Text.Trim();
-                            newVaccine.NumWasted = Convert.ToInt32(wastedAmountTextBox.Text.Trim());
-                            newVaccine.NumDose = Convert.ToInt32(doseNumberTextBox.Text.Trim());
-                            //newVaccine.RefusalReason = refusalReasonTextBox.Text.Trim();
-                            newVaccine.Vaccinator_Name = vaccinatorTextBox.Text.Trim();
+                                Refusal newRefusal = new Refusal();
+                                newRefusal.patient_ID = newPatient.patient_ID;
+                                newRefusal.User_ID = newUser.User_ID;
+                                newRefusal.Date = dateAdministeredTextBox.Value;
 
-                            if (leftarmRadio.Checked)
-                            {
-                                newVaccine.Administration_site = "Left Arm";
-                            }
-                            else if (rightarmRadio.Checked)
-                            {
-                                newVaccine.Administration_site = "Right Arm";
-                            }
-                            else if (extremityleftRadio.Checked)
-                            {
-                                newVaccine.Administration_site = "Lower Extremity Left";
-                            }
-                            else if (extremityRightRadio.Checked)
-                            {
-                                newVaccine.Administration_site = "Lower Extremity Right";
-                            }
-
-                            if (maYesRadio.Checked)
-                            {
-                                newVaccine.MissedAppointment = "Y";
-                            }
-                            else if (maNoRadio.Checked)
-                            {
-                                newVaccine.MissedAppointment = "N";
-                            }
-
-                            if (coYesRadio.Checked)
-                            {
-                                newVaccine.Comorbidity = "Yes";
-                            }
-                            else if (coNoRadio.Checked)
-                            {
-                                newVaccine.Comorbidity = "No";
-                            }
-
-                            if (EUAYesRadio.Checked)
-                            {
-                                newVaccine.RevievedEUA = "Yes";
-                            }
-                            else if (EUANoRadio.Checked)
-                            {
-                                newVaccine.RevievedEUA = "No";
-                            }
-
-                            CheckInput.CheckRequiredFields(newPatient, newVaccine);
-
-                            try
-                            {
-                                if (VaccineMethods.VaccineExists(newVaccine.patient_ID, newVaccine.NumDose))
+                                if (refusalReasonTextBox.SelectedIndex == -1)
                                 {
-                                    MessageBox.Show("A record of dose number " + newVaccine.NumDose + " already exists for " + newPatient.First_Name + " " + newPatient.Last_Name
-                                        + ". A duplicate record can not be created.");
+                                    MessageBox.Show("A reason must be given for a vaccination refusal.");
                                 }
                                 else
                                 {
-                                    try
-                                    {
-                                        bool vaccineStatus = VaccineMethods.AddVaccine(newVaccine);
+                                    newRefusal.Refusal_Reason = refusalReasonTextBox.Text.Trim();
 
-                                        if (vaccineStatus)
-                                        {
-                                            MessageBox.Show("Vaccine information for " + fNameTextBox.Text.Trim() + " " + lNameTextBox.Text.Trim() + " has been updated.");
-
-                                            ClearAllFields();
-                                        }
-                                        else
-                                        {
-                                            MessageBox.Show("Vaccine information COULD NOT be updated.");
-                                        }
-                                    }
-                                    catch (Exception ex)
+                                    if (MessageBox.Show("Would you like to save vaccine refusal information for this patient?",
+                                        "Patient " + fNameTextBox.Text.Trim() + " " + lNameTextBox.Text.Trim() + ".", MessageBoxButtons.YesNo) == DialogResult.Yes)
                                     {
-                                        MessageBox.Show(ex.Message);
+                                        //newPatient.patient_ID = newInsurance.patient_ID;
+                                        try
+                                        {
+                                            newInsurance.patient_ID = newPatient.patient_ID;
+
+                                            if (CheckInput.CheckForInsurance(newInsurance) && !(InsuranceMethods.InsuranceExists(newInsurance)))
+                                            {
+                                                try
+                                                {
+                                                    InsuranceMethods.AddInsurance(newInsurance);
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    throw ex;
+                                                }
+                                            }
+                                            else if (CheckInput.CheckForInsurance(newInsurance) && InsuranceMethods.InsuranceExists(newInsurance))
+                                            {
+                                                try
+                                                {
+                                                    InsuranceMethods.UpdateInsurance(newInsurance);
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    throw ex;
+                                                }
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            throw ex;
+                                        }
+                                        try
+                                        {
+                                            if (RefusalMethods.AddRefusal(newRefusal, newUser))
+                                            {
+                                                MessageBox.Show("Vaccine refusal information for this patient has been recorded.");
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            throw ex;
+                                        }
+
                                     }
                                 }
                             }
-                            catch (Exception ex)
+                            else
                             {
-                                MessageBox.Show(ex.Message);
+
+                                newVaccine.patient_ID = newPatient.patient_ID;
+
+                                CheckInput.CheckRequiredFields(newPatient, newVaccine);
+
+                                try
+                                {
+                                    if (VaccineMethods.VaccineExists(newVaccine.patient_ID, newVaccine.NumDose))
+                                    {
+                                        MessageBox.Show("A record of dose number " + newVaccine.NumDose + " already exists for " + newPatient.First_Name + " " + newPatient.Last_Name
+                                            + ". A duplicate record can not be created.");
+                                    }
+                                    else
+                                    {
+                                        if (MessageBox.Show("Would you like to save vaccine information for this patient?",
+                                            "Patient " + fNameTextBox.Text.Trim() + " " + lNameTextBox.Text.Trim() + ".", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                                        {
+                                            //newPatient.patient_ID = newInsurance.patient_ID;
+                                            try
+                                            {
+                                                newInsurance.patient_ID = newPatient.patient_ID;
+
+                                                if (CheckInput.CheckForInsurance(newInsurance) && !(InsuranceMethods.InsuranceExists(newInsurance)))
+                                                {
+                                                    try
+                                                    {
+                                                        InsuranceMethods.AddInsurance(newInsurance);
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        throw ex;
+                                                    }
+                                                }
+                                                else if (CheckInput.CheckForInsurance(newInsurance) && InsuranceMethods.InsuranceExists(newInsurance))
+                                                {
+                                                    try
+                                                    {
+                                                        InsuranceMethods.UpdateInsurance(newInsurance);
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        throw ex;
+                                                    }
+                                                }
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                throw ex;
+                                            }
+                                            try
+                                            {
+                                                bool vaccineStatus = VaccineMethods.AddVaccine(newVaccine);
+
+                                                if (vaccineStatus)
+                                                {
+                                                    MessageBox.Show("Vaccine information for " + fNameTextBox.Text.Trim() + " " + lNameTextBox.Text.Trim() + " has been updated.");
+
+                                                    ClearAllFields();
+                                                }
+                                                else
+                                                {
+                                                    MessageBox.Show("Vaccine information COULD NOT be updated.");
+                                                }
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                MessageBox.Show(ex.Message);
+                                            }
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show(ex.Message);
+                                }
                             }
 
                         }
@@ -463,7 +650,7 @@ namespace VaxTrax_2._0_
 
         private static string GetConnectionString()
         {
-            string connectionString = "server=vaxtrax.database.windows.net;database=VaxTraxDB;user id=Brinkmann;password=VaxTrax1!;";
+            string connectionString = "server=mc-sluggo.STLCC.edu;database=is241-VaxTrax;user id=mbrinkmann;password=VaxTrax1!;";
 
             return connectionString;
         }
@@ -527,7 +714,7 @@ namespace VaxTrax_2._0_
             
             refuseYesRadio.Checked = false;
             refusedNoRadio.Checked = false;
-            refusalReasonTextBox.Text = "";
+            refusalReasonTextBox.SelectedIndex = -1;
             refusalReasonTextBox.Enabled = false;
             
             EUAYesRadio.Checked = false;
@@ -675,9 +862,13 @@ namespace VaxTrax_2._0_
             
             Patient newPatient = new Patient();
 
+            Insurance newInsurance = new Insurance();
+
             try
             {
                 newPatient = PatientMethods.GetPatient(searchFName.Text.Trim(), searchLName.Text.Trim(), searchDOB.Text.Trim());
+
+                newInsurance = InsuranceMethods.GetInsurance(newPatient.patient_ID);
 
                 if (newPatient != null)
                 {
@@ -819,6 +1010,10 @@ namespace VaxTrax_2._0_
 
                         patientInfoGroupBox.Enabled = false;
 
+                        insurerTextBox.Text = newInsurance.Insurer;
+                        primaryHolderTextBox.Text = newInsurance.Primary_Holder;
+                        insuranceIDTextBox.Text = newInsurance.Group_ID;
+
                         try
                         {
                             List<DataGridVaccine> vaccineList = new List<DataGridVaccine>();
@@ -958,6 +1153,55 @@ namespace VaxTrax_2._0_
                 
             }
         */
+        }
+
+        private void zipcodeTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // This little snippet restricts the user from entering any character into the zip code
+            // textbox other than a numeric digit.
+            e.Handled = !char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar);
+        }
+
+        private void fNameTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // This restricts the user from entering numeric digits in the first name text box.
+            e.Handled = !(char.IsLetter(e.KeyChar) || e.KeyChar == (char)Keys.Back || e.KeyChar == (char)Keys.Space || e.KeyChar == '.');
+        }
+
+        private void mNameTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // This restricts the user from entering numeric digits in the middle name text box.
+            e.Handled = !(char.IsLetter(e.KeyChar) || e.KeyChar == (char)Keys.Back || e.KeyChar == (char)Keys.Space || e.KeyChar == '.');
+        }
+
+        private void lNameTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // This restricts the user from entering numeric digits in the last name text box.
+            e.Handled = !(char.IsLetter(e.KeyChar) || e.KeyChar == (char)Keys.Back || e.KeyChar == (char)Keys.Space || e.KeyChar == '.');
+        }
+
+        private void cityTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // This restricts the user from entering numeric digits in the city text box.
+            e.Handled = !(char.IsLetter(e.KeyChar) || e.KeyChar == (char)Keys.Back || e.KeyChar == (char)Keys.Space || e.KeyChar == '.');
+        }
+
+        private void countyTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // This restricts the user from entering numeric digits in the county text box.
+            e.Handled = !(char.IsLetter(e.KeyChar) || e.KeyChar == (char)Keys.Back || e.KeyChar == (char)Keys.Space || e.KeyChar == '.');
+        }
+
+        private void vaccinatorTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // This restricts the user from entering numeric digits in the vaccinator text box.
+            e.Handled = !(char.IsLetter(e.KeyChar) || e.KeyChar == (char)Keys.Back || e.KeyChar == (char)Keys.Space || e.KeyChar == '.');
+        }
+
+        private void primaryHolderTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // This restricts the user from entering numeric digits in the insurance holder text box.
+            e.Handled = !(char.IsLetter(e.KeyChar) || e.KeyChar == (char)Keys.Back || e.KeyChar == (char)Keys.Space || e.KeyChar == '.');
         }
     }
 }
