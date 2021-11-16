@@ -13,7 +13,7 @@ namespace VaxTrax_2._0_
     {
         public static bool AddPatient(Patient objPatient)
         {
-            bool returnStatus;
+            bool Status;
             int rowsAffected = 0;
             string connectionString = GetConnectionString();
             
@@ -47,9 +47,9 @@ namespace VaxTrax_2._0_
                 throw ex;
             }
 
-            returnStatus = rowsAffected > 0 ? true : false;
+            Status = rowsAffected > 0 ? true : false;
 
-            return returnStatus;
+            return Status;
 
         }
 
@@ -82,7 +82,7 @@ namespace VaxTrax_2._0_
 
         public static bool PatientExists(string FName, string LName, string DOB)
         {
-            bool returnStatus;
+            bool status;
 
             int patientExists;
 
@@ -110,20 +110,19 @@ namespace VaxTrax_2._0_
 
             if (patientExists == 1)
             {
-                returnStatus = true;
+                status = true;
             }
             else
             {
-                returnStatus = false;
+                status = false;
             }
 
-            return returnStatus;
-
+            return status;
         }
 
         private static string GetConnectionString()
         {
-            string connectionString = "server=vaxtrax.database.windows.net;database=VaxTraxDB;user id=Brinkmann;password=VaxTrax1!;";
+            string connectionString = "server=mc-sluggo.STLCC.edu;database=is241-VaxTrax;user id=mbrinkmann;password=VaxTrax1!;"; ;
 
             return connectionString;
         }
