@@ -114,7 +114,7 @@ namespace VaxTrax_2._0_
 
         private static string GetConnectionString()
         {
-            string connectionString = "server=vaxtrax.database.windows.net;database=VaxTraxDB;user id=Brinkmann;password=VaxTrax1!;";
+            string connectionString = "server=mc-sluggo.STLCC.edu;database=is241-VaxTrax;user id=mbrinkmann;password=VaxTrax1!;";
 
             return connectionString;
         }
