@@ -11,15 +11,15 @@ namespace VaxTrax_2._0_
 {
     class LoginMethod
     {
-        public static bool IsValid()
+        public static bool IsValid(string UserName, string Password)
         {
-            bool returnStatus;
+            bool Status;
 
             int userExists;
 
             string connectionString = GetConnectionString();
 
-            string sqlString = "select count(*) from Vaccinator where UserName = @GlobalUser_UserID and Password = @GlobalUser_Password";
+            string sqlString = "select count(*) from [User] where UserName = @UserName and Password = @Password";
 
             try
             {
@@ -27,8 +27,8 @@ namespace VaxTrax_2._0_
                 {
                     DynamicParameters parameters = new DynamicParameters();
 
-                    parameters.Add("@GlobalUser_UserID", GlobalUser.UserID, DbType.String, ParameterDirection.Input);
-                    parameters.Add("@GlobalUser_Password", GlobalUser.Password, DbType.String, ParameterDirection.Input);
+                    parameters.Add("@UserName", UserName, DbType.String, ParameterDirection.Input);
+                    parameters.Add("@Password", Password, DbType.String, ParameterDirection.Input);
 
                     userExists = (Convert.ToInt32(db.ExecuteScalar(sqlString, parameters)));
                 }
@@ -40,19 +40,45 @@ namespace VaxTrax_2._0_
 
             if(userExists == 1)
             {
-                returnStatus = true;
+                Status = true;
             }
             else
             {
-                returnStatus = false;
+                Status = false;
             }
 
-            return returnStatus;
+            return Status;
+        }
+
+        public static int GetUserID(string username, string password)
+        {
+            int userID;
+
+            string connectionString = GetConnectionString();
+
+            string sqlString = "select User_ID from [User] where UserName = @UserName and Password = @Password";
+
+            try
+            {
+                using (IDbConnection db = new SqlConnection(connectionString))
+                {
+                    DynamicParameters parameters = new DynamicParameters();
+                    parameters.Add("@UserName", username, DbType.String, ParameterDirection.Input);
+                    parameters.Add("@Password", password, DbType.String, ParameterDirection.Input);
+                    userID = db.Execute(sqlString, parameters);
+                    //myPatient = db.QuerySingleOrDefault<Patient>(sqlString, parameters);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return userID;
         }
 
         private static string GetConnectionString()
         {
-            string connectionString = "server=vaxtrax.database.windows.net;database=VaxTraxDB;user id=Brinkmann;password=VaxTrax1!;";
+            string connectionString = "server=mc-sluggo.STLCC.edu;database=is241-VaxTrax;user id=mbrinkmann;password=VaxTrax1!;";
 
             return connectionString;
         }
