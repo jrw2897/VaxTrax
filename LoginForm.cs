@@ -10,6 +10,8 @@ using System.Windows.Forms;
 
 namespace VaxTrax_2._0_
 {
+    // Author: Dennis Steven Dyer II
+    //   Date: 10/13/2021
     public partial class LoginForm : Form
     {
         public LoginForm()
@@ -17,19 +19,29 @@ namespace VaxTrax_2._0_
             InitializeComponent();
         }
 
+        //User newUser = new User();
+
+        public static string UserName;
+        public static string Password;
+
         private void loginButton_Click(object sender, EventArgs e)
         {
-            
-            GlobalUser.UserID = userIDTextBox.Text.Trim();
-            GlobalUser.Password = passwordTextBox.Text.Trim();
+            User newUser = new User();
+            //GlobalUser.UserID = userIDTextBox.Text.Trim();
+            //GlobalUser.Password = passwordTextBox.Text.Trim();
+            newUser.UserName = userIDTextBox.Text.Trim();
+            newUser.Password = passwordTextBox.Text.Trim();
+
+            UserName = newUser.UserName;
+            Password = newUser.Password;
 
             try
             {
-                bool status = LoginMethod.IsValid();
+                bool status = LoginMethod.IsValid(newUser.UserName, newUser.Password);
 
                 if (status)
                 {
-                    MessageBox.Show("Login Good! Welcome " + GlobalUser.UserID);
+                    MessageBox.Show("Login Good! Welcome " + newUser.UserName);
 
                     MainForm newMainForm = new MainForm();
 
@@ -42,9 +54,10 @@ namespace VaxTrax_2._0_
                     MessageBox.Show("Login Bad");
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageBox.Show("Login Bad");
+                //MessageBox.Show("Login Bad");
+                MessageBox.Show(ex.Message);
             }
             
             /*
