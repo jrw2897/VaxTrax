@@ -22,5 +22,6 @@ namespace VaxTrax_2._0_
         public string MissedAppointment { get; set; }
         public string Comorbidity { get; set; }
         public string RevievedEUA { get; set; }
+        public int User_ID { get; set; }
     }
 }
