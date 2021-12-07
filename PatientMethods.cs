@@ -13,7 +13,7 @@ namespace VaxTrax_2._0_
     {
         public static bool AddPatient(Patient objPatient)
         {
-            bool returnStatus;
+            bool Status;
             int rowsAffected = 0;
             string connectionString = GetConnectionString();
             
@@ -47,9 +47,9 @@ namespace VaxTrax_2._0_
                 throw ex;
             }
 
-            returnStatus = rowsAffected > 0 ? true : false;
+            Status = rowsAffected > 0 ? true : false;
 
-            return returnStatus;
+            return Status;
 
         }
 
@@ -82,7 +82,7 @@ namespace VaxTrax_2._0_
 
         public static bool PatientExists(string FName, string LName, string DOB)
         {
-            bool returnStatus;
+            bool status;
 
             int patientExists;
 
@@ -110,20 +110,46 @@ namespace VaxTrax_2._0_
 
             if (patientExists == 1)
             {
-                returnStatus = true;
+                status = true;
             }
             else
             {
-                returnStatus = false;
+                status = false;
             }
 
-            return returnStatus;
-
+            return status;
         }
+        
+        public static void UpdatePatientAddress(Patient objPatient)
+        {
+            string connectionString = GetConnectionString();
+            string sqlString = "update Patient set Street1 = @Street1, Street2 = @Street2, City = @City, County = @County, State = @State, Zipcode = @Zipcode " +
+                "where patient_ID = @patient_ID";
 
+            try
+            {
+                using (IDbConnection db = new SqlConnection(connectionString))
+                {
+                    DynamicParameters parameters = new DynamicParameters();
+                    parameters.Add("@Street1", objPatient.Street1, DbType.String, ParameterDirection.Input);
+                    parameters.Add("@Street2", objPatient.Street2, DbType.String, ParameterDirection.Input);
+                    parameters.Add("@City", objPatient.City, DbType.String, ParameterDirection.Input);
+                    parameters.Add("@County", objPatient.County, DbType.String, ParameterDirection.Input);
+                    parameters.Add("@State", objPatient.State, DbType.String, ParameterDirection.Input);
+                    parameters.Add("@Zipcode", objPatient.Zipcode, DbType.String, ParameterDirection.Input);
+                    parameters.Add("@patient_ID", objPatient.patient_ID, DbType.Int32, ParameterDirection.Input);
+                    db.Execute(sqlString, parameters);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        
         private static string GetConnectionString()
         {
-            string connectionString = "server=vaxtrax.database.windows.net;database=VaxTraxDB;user id=Brinkmann;password=VaxTrax1!;";
+            string connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["connectionString"].ToString();
 
             return connectionString;
         }
