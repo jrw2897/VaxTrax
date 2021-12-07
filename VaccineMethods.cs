@@ -11,14 +11,16 @@ namespace VaxTrax_2._0_
 {
     class VaccineMethods
     {
-        public static bool AddVaccine(Vaccine objVaccine)
+        public static bool AddVaccine(Vaccine objVaccine, User objUser)
         {
             bool Status;
             int rowsAffected = 0;
             string connectionString = GetConnectionString();
 
-            string sqlString = "insert into Vaccine values (@patient_ID, @NumDose, @Vaccinator_Name, @Administration_site, @Product, @Manufacture, @Typecvx, @LotNum, @ExpirationDate, @DateAdministered, @NumWasted," +
-                " @MissedAppointment, @Comorbidity, @RevievedEUA)";
+            string sqlString = "insert into Vaccine (patient_ID, NumDose, Vaccinator_Name, Administration_site, Product, Manufacture, Typecvx, LotNum, ExpirationDate, " +
+                "DateAdministered, NumWasted, MissedAppointment, Comorbidity, RevievedEUA, User_ID) select @patient_ID, @NumDose, @Vaccinator_Name, @Administration_site, " +
+                "@Product, @Manufacture, @Typecvx, @LotNum, @ExpirationDate, @DateAdministered, @NumWasted," +
+                " @MissedAppointment, @Comorbidity, @RevievedEUA, User_ID from [User] where UserName = @UserName";
 
             try
             {
@@ -39,6 +41,7 @@ namespace VaxTrax_2._0_
                     parameters.Add("@MissedAppointment", objVaccine.MissedAppointment, DbType.String, ParameterDirection.Input);
                     parameters.Add("@Comorbidity", objVaccine.Comorbidity, DbType.String, ParameterDirection.Input);
                     parameters.Add("@RevievedEUA", objVaccine.RevievedEUA, DbType.String, ParameterDirection.Input);
+                    parameters.Add("@UserName", objUser.UserName, DbType.String, ParameterDirection.Input);
 
                     rowsAffected = db.Execute(sqlString, parameters);
                 }
@@ -112,9 +115,69 @@ namespace VaxTrax_2._0_
             return vaccineList;
         }
 
+        public static List<Vaccine> GetTodaysVaccines()
+        {
+            List<Vaccine> vaccineList = new List<Vaccine>();
+            string connectionString = GetConnectionString();
+            string sqlString = "select * from Vaccine where DateAdministered = @DateAdministered";
+
+            try
+            {
+                using (IDbConnection db = new SqlConnection(connectionString))
+                {
+                    DynamicParameters parameters = new DynamicParameters();
+                    parameters.Add("@DateAdministered", System.DateTime.Today, DbType.Date, ParameterDirection.Input);
+                    vaccineList = db.Query<Vaccine>(sqlString, parameters).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
+            return vaccineList;
+        }
+
+        public static bool DailyVaccineExists(DateTime Day)
+        {
+            bool status;
+            int dailyVaxExists;
+
+            string connectionString = GetConnectionString();
+
+            string sqlString = "select count(*) from Vaccine where DateAdministered = @DateAdministered";
+
+            try
+            {
+                using (IDbConnection db = new SqlConnection(connectionString))
+                {
+                    DynamicParameters parameters = new DynamicParameters();
+
+                    parameters.Add("@DateAdministered", Day, DbType.Date, ParameterDirection.Input);
+
+                    dailyVaxExists = (Convert.ToInt32(db.ExecuteScalar(sqlString, parameters)));
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
+            if (dailyVaxExists > 0)
+            {
+                status = true;
+            }
+            else
+            {
+                status = false;
+            }
+
+            return status;
+        }
+
         private static string GetConnectionString()
         {
-            string connectionString = "server=vaxtrax.database.windows.net;database=VaxTraxDB;user id=Brinkmann;password=VaxTrax1!;";
+            string connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["connectionString"].ToString();
 
             return connectionString;
         }
