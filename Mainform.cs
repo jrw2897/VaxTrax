@@ -338,6 +338,8 @@ namespace VaxTrax_2._0_
                                             PatientMethods.UpdatePatientAddress(newPatient);
                                         }
                                         MessageBox.Show("Vaccine refusal information for this patient has been recorded.");
+
+                                        ClearAllFields();
                                     }
                                 }
                                 catch (Exception ex)
@@ -510,6 +512,8 @@ namespace VaxTrax_2._0_
                                         if (RefusalMethods.AddRefusal(newRefusal, newUser))
                                         {
                                             MessageBox.Show("Vaccine refusal information for this patient has been recorded.");
+
+                                            ClearAllFields();
                                         }
                                     }
                                     catch (Exception ex)
@@ -729,6 +733,8 @@ namespace VaxTrax_2._0_
             EnableGroupControls(sexGroupBox.Controls);
             EnableGroupControls(raceGroupBox.Controls);
             EnableGroupControls(ethnicityGroupBox.Controls);
+
+            
 
         }
 
